@@ -2,16 +2,25 @@ name: Release
 
 # Compila la app en Windows y publica un Release al subir una etiqueta v*
 # (por ejemplo: git tag v3.7.0 && git push origin v3.7.0).
-# También se puede lanzar a mano desde la pestaña Actions.
+# También se puede lanzar a mano desde la pestaña Actions indicando la versión
+# (por ejemplo v3.7.0): en ese caso el workflow crea la etiqueta y el Release.
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión de SuperSplat a publicar (ej. v3.7.0)'
+        required: true
+        default: 'v3.7.0'
 
 permissions:
   contents: write
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
   build-windows:
@@ -30,7 +39,11 @@ jobs:
       - name: Compilar SuperSplat
         run: npm run build:editor
         env:
-          SUPERSPLAT_REF: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          SUPERSPLAT_REF: ${{ env.VERSION }}
+
+      - name: Usar la versión en package.json
+        shell: bash
+        run: npm pkg set version="${VERSION#v}"
 
       - name: Empaquetar para Windows
         run: npx electron-builder --win nsis portable --x64 --publish never
@@ -42,13 +55,14 @@ jobs:
           path: release/*.exe
 
       - name: Publicar Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: SuperSplat Desktop ${{ github.ref_name }}
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: SuperSplat Desktop ${{ env.VERSION }}
           files: release/*.exe
           body: |
-            SuperSplat Desktop basado en [SuperSplat ${{ github.ref_name }}](https://github.com/playcanvas/supersplat/releases/tag/${{ github.ref_name }}) de PlayCanvas.
+            SuperSplat Desktop basado en [SuperSplat ${{ env.VERSION }}](https://github.com/playcanvas/supersplat/releases/tag/${{ env.VERSION }}) de PlayCanvas.
 
             ## Descargas
             - **SuperSplat-Setup-*.exe**: instalador con accesos directos, desinstalador y asociación de archivos (`.ply`, `.splat`, `.sog`, `.spz`, `.ksplat`, `.ssproj`).

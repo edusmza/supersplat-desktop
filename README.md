@@ -57,10 +57,13 @@ Actions) y publica un Release con el instalador y el portable cada vez que se
 sube una etiqueta `v*`. La etiqueta elige también la versión de SuperSplat:
 
 ```powershell
-# actualizá "version" en package.json, commiteá y luego:
 git tag v3.7.0
 git push origin v3.7.0
 ```
+
+También podés lanzarlo sin etiqueta desde la pestaña **Actions → Release →
+Run workflow**, escribiendo la versión (por ejemplo `v3.7.0`). El número de
+versión del instalador se toma de la etiqueta automáticamente.
 
 ## Estructura
 
