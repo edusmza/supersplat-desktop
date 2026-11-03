@@ -50,6 +50,18 @@ Para fijar una versión concreta, borrá `vendor\supersplat` y usá
 Acordate de actualizar `"version"` en `package.json` si querés que el instalador
 lleve el número nuevo.
 
+## Releases automáticos
+
+El workflow `.github/workflows/release.yml` compila la app en Windows (GitHub
+Actions) y publica un Release con el instalador y el portable cada vez que se
+sube una etiqueta `v*`. La etiqueta elige también la versión de SuperSplat:
+
+```powershell
+# actualizá "version" en package.json, commiteá y luego:
+git tag v3.7.0
+git push origin v3.7.0
+```
+
 ## Estructura
 
 ```
