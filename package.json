@@ -1,0 +1,82 @@
+{
+    "name": "supersplat-desktop",
+    "productName": "SuperSplat",
+    "version": "3.7.0",
+    "description": "SuperSplat (editor de Gaussian Splats) como aplicación de escritorio para Windows",
+    "main": "main.js",
+    "author": "SuperSplat Desktop",
+    "license": "MIT",
+    "scripts": {
+        "build:editor": "node scripts/build-editor.js",
+        "start": "electron .",
+        "dist": "electron-builder --win nsis portable --x64",
+        "dist:zip": "electron-builder --win zip --x64"
+    },
+    "devDependencies": {
+        "electron": "45.2.2",
+        "electron-builder": "26.18.0"
+    },
+    "build": {
+        "appId": "com.supersplat.desktop",
+        "productName": "SuperSplat",
+        "directories": {
+            "output": "release",
+            "buildResources": "build"
+        },
+        "files": [
+            "main.js",
+            "editor/**/*",
+            "build/icon.png",
+            "package.json"
+        ],
+        "asar": true,
+        "win": {
+            "icon": "build/icon.ico",
+            "artifactName": "SuperSplat-${version}-${arch}-${target}.${ext}"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "SuperSplat",
+            "artifactName": "SuperSplat-Setup-${version}.${ext}"
+        },
+        "portable": {
+            "artifactName": "SuperSplat-Portable-${version}.${ext}"
+        },
+        "fileAssociations": [
+            {
+                "ext": "ply",
+                "name": "Gaussian Splat PLY",
+                "role": "Editor"
+            },
+            {
+                "ext": "splat",
+                "name": "Gaussian Splat",
+                "role": "Editor"
+            },
+            {
+                "ext": "sog",
+                "name": "Gaussian Splat SOG",
+                "role": "Editor"
+            },
+            {
+                "ext": "spz",
+                "name": "Gaussian Splat SPZ",
+                "role": "Editor"
+            },
+            {
+                "ext": "ksplat",
+                "name": "Gaussian Splat KSPLAT",
+                "role": "Editor"
+            },
+            {
+                "ext": "ssproj",
+                "name": "SuperSplat Project",
+                "role": "Editor"
+            }
+        ],
+        "publish": null
+    }
+}
