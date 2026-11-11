@@ -4,6 +4,8 @@ name: Release
 # (por ejemplo: git tag v3.7.0 && git push origin v3.7.0).
 # También se puede lanzar a mano desde la pestaña Actions indicando la versión
 # (por ejemplo v3.7.0): en ese caso el workflow crea la etiqueta y el Release.
+# Para publicar correcciones de la app sin cambiar de SuperSplat se agrega un
+# sufijo -rN (ej. v3.7.0-r2): se compila SuperSplat v3.7.0 igual.
 
 on:
   push:
@@ -12,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Versión de SuperSplat a publicar (ej. v3.7.0)'
+        description: 'Versión a publicar (ej. v3.7.0, o v3.7.0-r2 para una corrección de la app)'
         required: true
         default: 'v3.7.0'
 
@@ -37,9 +39,8 @@ jobs:
         run: npm ci
 
       - name: Compilar SuperSplat
-        run: npm run build:editor
-        env:
-          SUPERSPLAT_REF: ${{ env.VERSION }}
+        shell: bash
+        run: SUPERSPLAT_REF="${VERSION%%-r*}" npm run build:editor
 
       - name: Usar la versión en package.json
         shell: bash

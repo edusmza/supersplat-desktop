@@ -1,5 +1,5 @@
 // SuperSplat Desktop - envoltorio Electron del editor SuperSplat (MIT, PlayCanvas)
-const { app, BrowserWindow, protocol, net, shell, Menu } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, Menu, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -68,6 +68,49 @@ function registerProtocol() {
     });
 }
 
+// Chromium bloquea algunas carpetas para la File System Access API (la carpeta de
+// usuario, Escritorio, Documentos, Descargas, carpetas del sistema...). En Chrome
+// aparece un aviso, pero en Electron, si nadie responde, el guardado queda colgado
+// para siempre. Como esto es una app local, se permiten las carpetas del usuario
+// y solo se rechazan las del sistema, avisando para elegir otra.
+function isInside(child, parent) {
+    const rel = path.relative(parent, child);
+    return rel === '' || (!!rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+function isUserFolder(p) {
+    const home = app.getPath('home');
+    const blocked = [
+        app.getPath('appData'),
+        path.join(home, 'AppData'),
+        app.getPath('userData'),
+        path.dirname(app.getPath('exe'))
+    ];
+    return isInside(p, home) && !blocked.some((b) => isInside(p, b));
+}
+
+function handleRestrictedFolders() {
+    session.defaultSession.on('file-system-access-restricted', async (_e, details, callback) => {
+        if (isUserFolder(details.path)) {
+            callback('allow');
+            return;
+        }
+        const win = details.webContents ? BrowserWindow.fromWebContents(details.webContents) : null;
+        const { response } = await dialog.showMessageBox(win, {
+            type: 'warning',
+            title: 'SuperSplat',
+            message: 'No se puede usar esta carpeta',
+            detail: `"${details.path}" es una carpeta del sistema protegida.\n\n` +
+                'Elegí otra carpeta, por ejemplo una dentro de Documentos o del Escritorio.',
+            buttons: ['Elegir otra carpeta', 'Cancelar'],
+            defaultId: 0,
+            cancelId: 1,
+            noLink: true
+        });
+        callback(response === 0 ? 'tryAgain' : 'deny');
+    });
+}
+
 function filesFromArgv(argv) {
     return argv
         .slice(app.isPackaged ? 1 : 2)
@@ -131,6 +174,38 @@ function createWindow(files = []) {
         }
     });
 
+    // SuperSplat pide confirmación al salir con cambios sin guardar (beforeunload).
+    // Chrome muestra ese aviso, pero Electron no: simplemente cancela el cierre y la
+    // ventana parece "trabada". Acá se muestra el aviso como diálogo nativo.
+    win.webContents.on('will-prevent-unload', (e) => {
+        const response = dialog.showMessageBoxSync(win, {
+            type: 'question',
+            title: 'SuperSplat',
+            message: 'Hay cambios sin guardar',
+            detail: 'Si cerrás ahora, se pierden los cambios que no guardaste.',
+            buttons: ['Cerrar sin guardar', 'Cancelar'],
+            defaultId: 1,
+            cancelId: 1,
+            noLink: true
+        });
+        if (response === 0) e.preventDefault(); // preventDefault = permitir el cierre
+    });
+
+    // si el editor deja de responder, ofrecer cerrarlo igual
+    win.on('unresponsive', async () => {
+        const { response } = await dialog.showMessageBox(win, {
+            type: 'warning',
+            title: 'SuperSplat',
+            message: 'SuperSplat no responde',
+            detail: 'Podés esperar a que termine lo que está haciendo o cerrar la ventana.',
+            buttons: ['Esperar', 'Cerrar'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true
+        });
+        if (response === 1) win.destroy();
+    });
+
     win.loadURL(buildStartUrl(files));
     return win;
 }
@@ -155,6 +230,7 @@ if (!app.requestSingleInstanceLock()) {
     app.whenReady().then(() => {
         Menu.setApplicationMenu(null);
         registerProtocol();
+        handleRestrictedFolders();
         createWindow(filesFromArgv(process.argv));
     });
 
